@@ -1,7 +1,10 @@
 """Product Analytics & A/B Testing Platform — corrected five-tab Streamlit dashboard."""
+
 from pathlib import Path
 from datetime import date, timedelta
 import math
+import sys
+
 
 import numpy as np
 import pandas as pd
@@ -21,8 +24,23 @@ st.markdown("""<style>
 [data-testid="stMetricLabel"] {font-size: .9rem;}
 [data-testid="stMetricValue"] {font-size: clamp(1.25rem, 2vw, 2rem);}
 </style>""", unsafe_allow_html=True)
+
 ROOT = Path(__file__).resolve().parent.parent
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.ab_testing import (
+    calculate_conversion_rate,
+    calculate_uplift,
+    calculate_p_value,
+    calculate_confidence_interval,
+    calculate_srm_p_value,
+    calculate_sample_size,
+)
+
 DATA_PATH = ROOT / "data" / "ab_test_users.csv"
+
 
 @st.cache_data
 def load_data(path):
@@ -72,32 +90,58 @@ if not {"A", "B"}.issubset(metrics.index) or (metrics.loc[["A", "B"], "total_use
     st.error("Both Group A and Group B must contain users.")
     st.stop()
 A, B = metrics.loc["A"], metrics.loc["B"]
-rate_a, rate_b = float(A["conversion_rate"]), float(B["conversion_rate"])
+
+rate_a = calculate_conversion_rate(
+    int(A["total_conversions"]),
+    int(A["total_users"])
+)
+
+rate_b = calculate_conversion_rate(
+    int(B["total_conversions"]),
+    int(B["total_users"])
+)
+
 uplift = rate_b - rate_a
 absolute_uplift = uplift * 100
-relative_uplift = (uplift / rate_a * 100) if rate_a > 0 else float("nan")
+relative_uplift = calculate_uplift(rate_a, rate_b) * 100
 counts = [int(A["total_conversions"]), int(B["total_conversions"])]
 ns = [int(A["total_users"]), int(B["total_users"])]
 if sum(counts) in (0, sum(ns)):
-    z_stat, p_value = 0.0, 1.0
+    z_stat = 0.0
 else:
-    z_stat, p_value = proportions_ztest(counts, ns)
-    z_stat, p_value = float(z_stat), float(p_value)
+    z_stat, _ = proportions_ztest(counts, ns)
+    z_stat = float(z_stat)
+
+p_value = calculate_p_value(
+    counts[0],
+    ns[0],
+    counts[1],
+    ns[1]
+)
+
 try:
-    ci_lower, ci_upper = confint_proportions_2indep(count1=counts[1], nobs1=ns[1], count2=counts[0], nobs2=ns[0], compare="diff", method="newcomb", alpha=alpha)
+    ci_lower, ci_upper = calculate_confidence_interval(
+        counts[0],
+        ns[0],
+        counts[1],
+        ns[1],
+        alpha=alpha
+    )
 except ValueError:
     ci_lower, ci_upper = float("nan"), float("nan")
 
-power_analysis = NormalIndPower()
+
 def sample_size_per_group(base, target, selected_power, significance):
-    if not (0 < base < 1 and 0 < target < 1) or base == target:
-        return None
-    effect = abs(proportion_effectsize(base, target))
     try:
-        result = power_analysis.solve_power(effect_size=effect, alpha=significance, power=selected_power, ratio=1.0, alternative="two-sided")
-        return math.ceil(result) if np.isfinite(result) and result > 0 else None
+        return calculate_sample_size(
+            baseline_rate=base,
+            target_rate=target,
+            power=selected_power,
+            alpha=significance
+        )
     except (ValueError, ZeroDivisionError, OverflowError):
         return None
+
 
 required_per_group = sample_size_per_group(baseline_rate / 100, target_rate / 100, power, alpha)
 total_required_users = required_per_group * 2 if required_per_group is not None else None
@@ -108,7 +152,8 @@ n_a, n_b = ns
 group_a_percentage = n_a / current_users * 100
 group_b_percentage = n_b / current_users * 100
 srm_statistic, srm_p_value = chisquare([n_a, n_b], f_exp=[current_users / 2] * 2)
-srm_statistic, srm_p_value = float(srm_statistic), float(srm_p_value)
+srm_statistic = float(srm_statistic)
+srm_p_value = calculate_srm_p_value(n_a, n_b)
 quality_checks = {"Missing Values": missing_values == 0, "Duplicate Users": duplicate_users == 0,
                   "Invalid Conversions": invalid_conversions == 0, "Valid Experiment Groups": invalid_groups == 0,
                   "Sample Ratio Mismatch": srm_p_value >= 0.001}
@@ -160,7 +205,8 @@ with tab2:
     chart_df["conversion_rate"] *= 100
     fig = px.bar(chart_df, x="experiment_group", y="conversion_rate", color="experiment_group", text="conversion_rate", labels={"experiment_group": "Experiment Group", "conversion_rate": "Conversion Rate (%)"})
     fig.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
-    fig.update_layout(showlegend=False, yaxis_range=[0, max(15, chart_df["conversion_rate"].max() * 1.2)])
+    fig.update_layout(showlegend=False)
+    fig.update_yaxes(range=[0, max(15, chart_df["conversion_rate"].max() * 1.2)], autorange=False)
     st.plotly_chart(fig, use_container_width=True)
     st.subheader("Statistical Significance Analysis")
     c1, c2 = st.columns(2)
