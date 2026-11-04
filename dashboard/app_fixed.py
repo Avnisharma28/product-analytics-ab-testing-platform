@@ -240,13 +240,36 @@ with tab3:
     c1.metric("Group A Users", f"{n_a:,}")
     c2.metric("Group B Users", f"{n_b:,}")
     c3.metric("Group Balance Difference", f"{abs(group_a_percentage-group_b_percentage):.2f} pp")
-    st.bar_chart(pd.DataFrame({"Experiment Group": ["A", "B"], "Users": [n_a, n_b]}), x="Experiment Group", y="Users")
+    balance_fig = px.bar(
+        pd.DataFrame({
+            "Experiment Group": ["A", "B"],
+            "Users": [n_a, n_b]
+        }),
+        x="Experiment Group",
+        y="Users",
+        color="Experiment Group",
+        text="Users"
+    )
+
+    balance_fig.update_yaxes(range=[0, 600])
+    balance_fig.update_traces(textposition="outside")
+
+    balance_fig.update_layout(
+        showlegend=False,
+        yaxis_title="Users",
+        xaxis_title="Experiment Group"
+    )
+
+    st.plotly_chart(balance_fig, use_container_width=True)
+
+
     st.subheader("Sample Ratio Mismatch (SRM) Detection")
     c1, c2 = st.columns(2)
     c1.metric("SRM Chi-Square Statistic", f"{srm_statistic:.4f}")
     c2.metric("SRM P-Value", f"{srm_p_value:.4f}")
+
     if not allocation_healthy:
-        st.error("Sample ratio mismatch detected (p < 0.001). Investigate experiment assignment.")
+        st.error("Sample ratio mismatch detected (p < 0.001).")
     else:
         st.success("No sample ratio mismatch detected at the 0.001 threshold.")
     st.caption("SRM tests whether observed assignment matches the expected 50/50 allocation; a passing check does not establish that randomization was implemented correctly.")
