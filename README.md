@@ -13,6 +13,52 @@ The platform analyzes a simulated experiment with 1,000 users across control and
 
 It combines statistical analysis, interactive visualizations, experiment monitoring, and business decision support in a five-tab dashboard.
 
+
+## Dashboard Preview
+
+Explore the five-tab interactive dashboard, including statistical analysis, data validation, experiment monitoring, and business decision support.
+
+### 1. Experiment Overview
+
+![Experiment Overview](docs/screenshots/overview.png)
+
+### 2. A/B Test Analysis
+
+**Conversion Performance**
+
+![A/B Test Performance](docs/screenshots/ab_test_performance.png)
+
+**Conversion Rate Comparison**
+
+![Conversion Rate Comparison](docs/screenshots/conversion_comparison.png)
+
+**Statistical Significance**
+
+![Statistical Significance](docs/screenshots/statistical_significance.png)
+
+### 3. Data Quality
+
+![Data Quality Overview](docs/screenshots/data_quality_overview.png)
+
+![Automated Data Quality Checks](docs/screenshots/data_quality_checks.png)
+
+### 4. Experiment Monitoring
+
+![Experiment Health](docs/screenshots/experiment_health.png)
+
+![Experiment Progress](docs/screenshots/experiment_progress.png)
+
+![Traffic Sensitivity](docs/screenshots/traffic_sensitivity.png)
+
+### 5. Decision Intelligence
+
+![Executive Experiment Summary](docs/screenshots/decision_summary.png)
+
+![Business Recommendation](docs/screenshots/business_recommendation.png)
+
+---
+
+
 ## Business Problem
 
 A product team wants to determine whether a proposed product change improves user conversion.
@@ -132,11 +178,19 @@ The dashboard distinguishes observed conversion improvements from statistical ev
 ## Project Structure
 
 ```text
+
 product-analytics-ab-testing-platform/
+|-- .github/
+|   `-- workflows/
+|       `-- python-tests.yml
 |-- dashboard/
 |   `-- app_fixed.py
 |-- data/
 |   `-- ab_test_users.csv
+|-- docs/
+|   `-- screenshots/
+|       `-- overview.png
+|       `-- ... (other dashboard screenshots)
 |-- sql/
 |   `-- experiment_analysis.sql
 |-- src/
@@ -147,6 +201,7 @@ product-analytics-ab-testing-platform/
 |   `-- test_ab_testing.py
 |-- requirements.txt
 `-- README.md
+
 ```
 
 ## Running Locally
@@ -181,7 +236,11 @@ python -m pytest tests/test_ab_testing.py -v
 ```
 
 Latest locally verified result: **14 tests passed**.
+### Continuous Integration
 
+GitHub Actions automatically runs the 14 statistical unit tests on pushes and pull requests to the main branch.
+
+Latest verified GitHub Actions result: **14 tests passed**.
 ## Future Improvements
 
 - Automated testing through GitHub Actions
